@@ -1,7 +1,7 @@
 package com.example.myweatherappchallenge.di
 
 import android.app.Application
-import com.example.myweatherappchallenge.utils.Location
+import com.example.myweatherappchallenge.utils.LocationUtils
 import com.example.myweatherappchallenge.utils.PermissionUtils
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
@@ -26,7 +26,7 @@ object LocationModule {
     fun providesLocationTracker(
         fusedLocationProviderClient: FusedLocationProviderClient,
         application: Application
-    ): Location = PermissionUtils(
+    ): LocationUtils = PermissionUtils(
         fusedLocationProviderClient = fusedLocationProviderClient,
         application = application
     )

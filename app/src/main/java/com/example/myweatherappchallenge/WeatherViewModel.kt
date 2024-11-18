@@ -7,6 +7,7 @@ import com.example.myweatherappchallenge.data.repository.DataStoreRepository
 import com.example.myweatherappchallenge.data.repository.WeatherRepository
 import com.example.myweatherappchallenge.ui.CityUiState
 import com.example.myweatherappchallenge.ui.WeatherUiState
+import com.example.myweatherappchallenge.utils.LocationUtils
 import com.example.myweatherappchallenge.utils.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -25,7 +26,7 @@ import javax.inject.Inject
 @HiltViewModel
 class WeatherViewModel @Inject constructor(
     private val dataStoreCity: DataStoreRepository,
-    private val location: com.example.myweatherappchallenge.utils.Location,
+    private val location: LocationUtils,
     private val repository: WeatherRepository,
 ) : ViewModel() {
 

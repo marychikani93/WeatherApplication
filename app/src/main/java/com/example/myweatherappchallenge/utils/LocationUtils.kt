@@ -2,6 +2,6 @@ package com.example.myweatherappchallenge.utils
 
 import android.location.Location
 
-interface Location {
+interface LocationUtils {
     suspend fun getCurrentLocation(): Location?
 }

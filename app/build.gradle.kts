@@ -86,14 +86,16 @@ dependencies {
     implementation(libs.coroutines.play.services)
     implementation(libs.transport.runtime)
     implementation(libs.permissions)
+    implementation(libs.turbine)
     ksp(libs.hilt.compiler)
-    testImplementation(libs.junit)
+    androidTestImplementation(libs.junit)
     testImplementation(libs.mockk)
     androidTestImplementation(libs.mockk.android)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     testImplementation(libs.androidx.core.testing)
     testImplementation(libs.kotlinx.coroutines.test)
+
     testImplementation(libs.hilt.android.testing)
     debugImplementation(libs.compose.debug)
 }

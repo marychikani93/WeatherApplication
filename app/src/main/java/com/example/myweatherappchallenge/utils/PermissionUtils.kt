@@ -12,7 +12,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 class PermissionUtils (
     private val fusedLocationProviderClient: FusedLocationProviderClient,
     private val application: Application
-) : Location {
+) : LocationUtils {
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override suspend fun getCurrentLocation(): android.location.Location? {
