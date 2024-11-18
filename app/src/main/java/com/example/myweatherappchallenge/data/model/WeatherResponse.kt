@@ -4,7 +4,7 @@ import com.google.gson.annotations.SerializedName
 
 data class WeatherResponse(
     @SerializedName("coord") val cords: Cords,
-    @SerializedName("weather") val weather: Weather,
+    @SerializedName("weather") val weather: List<Weather>,
     @SerializedName("base") val base: String,
     @SerializedName("main") val main: Main,
     @SerializedName("visibility") val visibility: Int,
@@ -58,7 +58,7 @@ data class WeatherResponse(
     )
 }
 
-fun WeatherResponse.toWeather(): Weather = Weather(
+fun WeatherResponse.toWeather(): WeatherModel = WeatherModel(
     temperature = main.temp.toInt(),
     date = dt.toString(),
     wind = wind.speed.toInt(),
@@ -66,11 +66,11 @@ fun WeatherResponse.toWeather(): Weather = Weather(
     name = name,
     cloud = clouds.all,
     country = sys.country,
-    feelsLike = FeelsLike(
+    feelsLike = FeelsLikeModel(
         maxTemp = main.tempMax.toInt().toString(),
         minTemp = main.tempMin.toInt().toString(),
         sunset = sys.sunset.toString(),
         sunrise = sys.sunrise.toString(),
-        icon = weather.icon,
+        icon = weather[0].icon,
     )
 )

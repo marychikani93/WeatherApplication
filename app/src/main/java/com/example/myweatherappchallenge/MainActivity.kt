@@ -1,20 +1,21 @@
 package com.example.myweatherappchallenge
 
 import android.os.Bundle
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.ViewModelProvider
-import com.example.myweatherappchallenge.ui.screens.WeatherHomeScreen
+import androidx.activity.viewModels
+import com.example.myweatherappchallenge.ui.screens.WeatherComponent
+import dagger.hilt.android.AndroidEntryPoint
 
-class MainActivity : AppCompatActivity() {
+@AndroidEntryPoint
+class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val weatherViewModel = ViewModelProvider(this)[WeatherViewModel::class.java]
-
+        val weatherViewModel: WeatherViewModel by viewModels()
         setContent {
-            WeatherHomeScreen(
-                viewModel = weatherViewModel
+            WeatherComponent(
+                weatherViewModel = weatherViewModel
             )
         }
 

@@ -3,9 +3,9 @@ package com.example.myweatherappchallenge.di
 import com.example.myweatherappchallenge.BuildConfig
 import com.example.myweatherappchallenge.api.WeatherApi
 import com.example.myweatherappchallenge.utils.BASE_URL
-import com.google.android.datatransport.runtime.dagger.Module
-import com.google.android.datatransport.runtime.dagger.Provides
 import com.google.gson.GsonBuilder
+import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient

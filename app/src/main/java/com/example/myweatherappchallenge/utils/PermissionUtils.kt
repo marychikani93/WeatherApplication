@@ -1,45 +1,64 @@
 package com.example.myweatherappchallenge.utils
 
-import android.Manifest
+import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.LocationManager
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.google.android.gms.location.FusedLocationProviderClient
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.suspendCancellableCoroutine
 
-class PermissionUtils {
-    /**
-     * Function to request permission from the user
-     */
-    fun requestAccessFineLocationPermission(activity: AppCompatActivity, requestId: Int) {
-        ActivityCompat.requestPermissions(
-            activity,
-            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-            requestId
-        )
+class PermissionUtils (
+    private val fusedLocationProviderClient: FusedLocationProviderClient,
+    private val application: Application
+) : Location {
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override suspend fun getCurrentLocation(): android.location.Location? {
+        val hasAccessFineLocationPermission = ContextCompat.checkSelfPermission(
+            application,
+            android.Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        val hasAccessCoarseLocationPermission = ContextCompat.checkSelfPermission(
+            application,
+            android.Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        val locationManager = application.getSystemService(
+            Context.LOCATION_SERVICE
+        ) as LocationManager
+
+        val isGpsEnabled = locationManager
+            .isProviderEnabled(LocationManager.NETWORK_PROVIDER) ||
+                locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+
+        if (!isGpsEnabled && !(hasAccessCoarseLocationPermission || hasAccessFineLocationPermission)) {
+            return null
+        }
+
+        return suspendCancellableCoroutine { cont ->
+            fusedLocationProviderClient.lastLocation.apply {
+                if (isComplete) {
+                    if (isSuccessful) {
+                        cont.resume(result) {} // Resume coroutine with location result
+                    } else {
+                        cont.resume(null) {} // Resume coroutine with null location result
+                    }
+                    return@suspendCancellableCoroutine
+                }
+                addOnSuccessListener {
+                    cont.resume(it) {}  // Resume coroutine with location result
+                }
+                addOnFailureListener {
+                    cont.resume(null) {} // Resume coroutine with null location result
+                }
+                addOnCanceledListener {
+                    cont.cancel() // Cancel the coroutine
+                }
+            }
+        }
     }
 
-    /**
-     * Function to check if the location permissions are granted or not
-     */
-    fun isAccessFineLocationGranted(context: Context): Boolean {
-        return ContextCompat
-            .checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-    }
-
-    /**
-     * Function to check if location of the device is enabled or not
-     */
-    fun isLocationEnabled(context: Context): Boolean {
-        val locationManager: LocationManager =
-            context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
-                || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
-    }
-
-    val DEFAULT_LOCATION = "Arlington"
 }

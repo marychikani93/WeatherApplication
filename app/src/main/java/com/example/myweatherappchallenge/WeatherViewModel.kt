@@ -1,27 +1,31 @@
 package com.example.myweatherappchallenge
 
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.MutableLiveData
+import android.location.Location
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.myweatherappchallenge.data.model.Location
+import com.example.myweatherappchallenge.data.repository.DataStoreRepository
 import com.example.myweatherappchallenge.data.repository.WeatherRepository
-import com.example.myweatherappchallenge.ui.SearchState
+import com.example.myweatherappchallenge.ui.CityUiState
 import com.example.myweatherappchallenge.ui.WeatherUiState
-import com.example.myweatherappchallenge.utils.DEFAULT_CITY
 import com.example.myweatherappchallenge.utils.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
+
 
 @HiltViewModel
 class WeatherViewModel @Inject constructor(
+    private val dataStoreCity: DataStoreRepository,
+    private val location: com.example.myweatherappchallenge.utils.Location,
     private val repository: WeatherRepository,
 ) : ViewModel() {
 
@@ -29,46 +33,73 @@ class WeatherViewModel @Inject constructor(
         MutableStateFlow(WeatherUiState(inProgress = true))
     val weatherState: StateFlow<WeatherUiState> = _weatherState.asStateFlow()
 
-    private val _searchComponent: MutableState<SearchState> =
-        mutableStateOf(value = SearchState.DISABLED)
-    val searchComponent: State<SearchState> = _searchComponent
+    val cityUiState: StateFlow<CityUiState> =
+        dataStoreCity.getCity.map { name ->
+            CityUiState(name)
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = CityUiState("Unknown")
+        )
 
-    private val _searchText: MutableState<String> = mutableStateOf( value = "")
-    val searchText: State<String> = _searchText
-
-    private val _requestLocationPermission: MutableStateFlow<Boolean> =  MutableStateFlow(false)
-    val requestLocationPermission = _requestLocationPermission.asStateFlow()
-
-    fun setRequestLocationPermission(request: Boolean) {
-        _requestLocationPermission.value = request
+    private fun saveCity(city: String) {
+        viewModelScope.launch {
+            dataStoreCity.saveCity(city)
+        }
     }
 
-    fun setSearchState(value: SearchState) {
-        _searchComponent.value = value
+    fun getCurrentLocation() {
+        viewModelScope.launch(Dispatchers.IO) {
+            location.getCurrentLocation()?.let { getCityByLocation(it) } // Location
+        }
     }
 
-    fun setSearchText(value: String) {
-        _searchText.value = value
+    private fun getCityByLocation(currentLocation: Location) {
+        repository.getCurrentLocation(currentLocation.longitude, currentLocation.latitude)
+            .map { result ->
+                when (result) {
+                    is Result.Success -> {
+                        _weatherState.update {
+                            it.copy(
+                                lastSearchText = result.data.name + "," + result.data.country
+                            )
+                        }
+                        getWeatherInfo(city = result.data.name + "," + result.data.country)
+                    }
+
+                    is Result.Error -> {
+                        _weatherState.update {
+                            it.copy(
+                                showDetails = false,
+                                errorMessage = result.errorMessage
+                            )
+                        }
+                    }
+                }
+            }.launchIn(viewModelScope)
     }
 
-    init {
-        getWeatherInfo()
-    }
-
-
-    fun getWeatherInfo(city: String = DEFAULT_CITY) {
+    fun getWeatherInfo(city: String) {
+        saveCity(city)
         repository.getCurrentWeather(city).map { result ->
             when (result) {
                 is Result.Success -> {
-                    _weatherState.value = WeatherUiState(
-                        weather = result.data
-                    )
+                    _weatherState.update {
+                        it.copy(
+                            lastSearchText = city,
+                            showDetails = true,
+                            weather = result.data
+                        )
+                    }
                 }
 
                 is Result.Error -> {
-                    _weatherState.value = WeatherUiState(
-                        errorMessage = result.errorMessage
-                    )
+                    _weatherState.update {
+                        it.copy(
+                            showDetails = false,
+                            errorMessage = result.errorMessage
+                        )
+                    }
                 }
             }
         }.launchIn(viewModelScope)

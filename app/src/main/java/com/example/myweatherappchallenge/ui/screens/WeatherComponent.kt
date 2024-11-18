@@ -1,5 +1,9 @@
-package com.example.myweatherappchallenge.ui.composables
+package com.example.myweatherappchallenge.ui.screens
 
+import android.Manifest
+import android.annotation.SuppressLint
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,15 +24,18 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -36,42 +43,59 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.myweatherappchallenge.WeatherViewModel
 import com.example.myweatherappchallenge.ui.WeatherUiState
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
 
+@SuppressLint("PermissionLaunchedDuringComposition")
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun WeatherComponent(
     modifier: Modifier = Modifier,
-    viewModel: WeatherViewModel,
+    weatherViewModel: WeatherViewModel,
 ) {
+    val context = LocalContext.current
+    //instantiate the city
+    val savedCity by weatherViewModel.cityUiState.collectAsState()
+
+    val permissions = arrayOf(
+        Manifest.permission.ACCESS_COARSE_LOCATION,
+        Manifest.permission.ACCESS_FINE_LOCATION
+    )
+
+    val locationPermissions = rememberMultiplePermissionsState(
+        permissions = permissions.asList()
+    )
+
+    val launcherMultiplePermissions = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissionsMap ->
+        val areGranted = permissionsMap.values.reduce { acc, next -> acc && next }
+        if (areGranted) {
+            weatherViewModel.getCurrentLocation()
+        } else {
+            //val lastSearch = weatherViewModel.getPreviousSearchWord()
+            savedCity.name?.let { weatherViewModel.getWeatherInfo(it) }
+        }
+    }
+
+    //when the app get launched for the first time
+    LaunchedEffect(Unit) {
+        val hasLocationPermission = locationPermissions.allPermissionsGranted
+        if (!hasLocationPermission) { // Check if permissions are already granted
+            launcherMultiplePermissions.launch(permissions)
+        } else {
+            //val lastSearch = weatherViewModel.getPreviousSearchWord()
+            savedCity.name?.let { weatherViewModel.getWeatherInfo(it) }
+        }
+    }
+
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+
         WeatherContent(
             modifier = modifier.padding(innerPadding),
-            viewModel = viewModel,
+            viewModel = weatherViewModel,
         )
     }
-    /*val context = LocalContext.current
-    val requestLocationPermission by WeatherViewModel.requestLocationPermission.collectAsState()
-
-    if (requestLocationPermission) {
-        LocationPermissionComponent(
-            context,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            stringResource(id = R.string.permission_location_rationale),
-        ) { permissionAction ->
-
-            when (permissionAction) {
-                is PermissionAction.OnPermissionGranted -> {
-                    Log.d(TAG, "Permission grant successful") {
-                        locationViewModel.setRequestLocationPermission(false)
-                    }
-                    is PermissionAction.OnPermissionDenied -> {
-                        Log.d(TAG, "Permission grant denied")
-                        locationViewModel.setRequestLocationPermission(false)
-                    }
-                }
-
-            }
-        }
-    }*/
 }
 
 @Composable
@@ -79,9 +103,11 @@ fun WeatherContent(
     modifier: Modifier,
     viewModel: WeatherViewModel,
 ) {
+    val scope = rememberCoroutineScope()
 
-    var city by remember { mutableStateOf("") }
     val weatherState by viewModel.weatherState.collectAsState()
+    var city by remember { mutableStateOf("") }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -95,18 +121,23 @@ fun WeatherContent(
                 label = { Text("Search City") },
                 modifier = Modifier.weight(1f)
             )
-            IconButton(onClick = { viewModel.getWeatherInfo(city) }) {
+            IconButton(onClick = {
+                viewModel.getWeatherInfo(city)
+
+            }) {
                 Icon(Icons.Default.Search, contentDescription = "Search")
             }
         }
-        WeatherDetails(weatherState)
+        if (weatherState.showDetails) {
+            WeatherDetails(weatherState)
+        }
     }
 }
 
 @Composable
 fun WeatherDetails(
     data: WeatherUiState
-){
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -136,14 +167,13 @@ fun WeatherDetails(
 
         AsyncImage(
             modifier = Modifier.size(160.dp),
-            model = "https:${data.weather?.feelsLike?.icon}".replace("64x64", "128x128"),
+            model = "https://openweathermap.org/img/wn/${data.weather?.feelsLike?.icon}@2x.png".replace(
+                "64x64",
+                "128x128"
+            ),
             contentDescription = "Weather Icon",
             contentScale = ContentScale.Crop,
-            //placeholder = painterResource(R.drawable.baseline_broken_image_24), // replace with your actual placeholder
-            //error = painterResource(R.drawable.baseline_error_24)
         )
-
-//        Text(text = data.current.condition.text, fontSize = 64.sp)
         Spacer(modifier = Modifier.height(16.dp))
 
         Card {
@@ -159,8 +189,14 @@ fun WeatherDetails(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceAround
                 ) {
-                    WeatherItem(value = data.weather?.feelsLike?.maxTemp.toString(), key = "max temp")
-                    WeatherItem(value = data.weather?.feelsLike?.minTemp.toString(), key = "min temp")
+                    WeatherItem(
+                        value = data.weather?.feelsLike?.maxTemp.toString(),
+                        key = "max temp"
+                    )
+                    WeatherItem(
+                        value = data.weather?.feelsLike?.minTemp.toString(),
+                        key = "min temp"
+                    )
                 }
             }
         }

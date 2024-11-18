@@ -1,6 +1,6 @@
 package com.example.myweatherappchallenge.data.model
 
-data class Location (
+data class LocationModel (
     val name: String,
     val country: String,
 )

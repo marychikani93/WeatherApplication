@@ -1,6 +1,6 @@
 package com.example.myweatherappchallenge.data.model
 
-data class FeelsLike(
+data class FeelsLikeModel(
     val maxTemp: String,
     val minTemp: String,
     val sunrise: String,

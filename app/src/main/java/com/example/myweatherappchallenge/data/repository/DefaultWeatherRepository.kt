@@ -1,8 +1,8 @@
 package com.example.myweatherappchallenge.data.repository
 
 import com.example.myweatherappchallenge.api.WeatherApi
-import com.example.myweatherappchallenge.data.model.Location
-import com.example.myweatherappchallenge.data.model.Weather
+import com.example.myweatherappchallenge.data.model.LocationModel
+import com.example.myweatherappchallenge.data.model.WeatherModel
 import com.example.myweatherappchallenge.data.model.toLocation
 import com.example.myweatherappchallenge.data.model.toWeather
 import com.example.myweatherappchallenge.utils.Result
@@ -19,7 +19,7 @@ class DefaultWeatherRepository @Inject constructor(
     private val weatherApi: WeatherApi,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : WeatherRepository {
-    override fun getCurrentWeather(city: String): Flow<Result<Weather>> = flow {
+    override fun getCurrentWeather(city: String): Flow<Result<WeatherModel>> = flow {
         try {
             val result = weatherApi.getWeather(city = city).toWeather()
             emit(Result.Success(result))
@@ -30,9 +30,9 @@ class DefaultWeatherRepository @Inject constructor(
         }
     }.flowOn(dispatcher)
 
-    override fun getCurrentLocation(long: Long, lat: Long): Flow<Result<Location>> = flow {
+    override fun getCurrentLocation(long: Double, lat: Double): Flow<Result<LocationModel>> = flow {
         try {
-            val result = weatherApi.getLocation(long = long, lat = lat).toLocation()
+            val result = weatherApi.getLocation(lon = long, lat = lat)[0].toLocation()
             emit(Result.Success(result))
         } catch (exception: HttpException) {
             emit(Result.Error(exception.message().toString()))
